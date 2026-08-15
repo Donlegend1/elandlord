@@ -23,22 +23,21 @@ export default function AssistantDashboard({ stats, activeLeases, recentReceipts
         >
             <Head title="Assistant Dashboard" />
 
-            {/* Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Assigned Properties</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Assigned Properties</div>
                     <div className="text-3xl font-extrabold text-slate-800 mt-2">{stats.assignedPropertiesCount}</div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Tenants</div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Active Tenants</div>
                     <div className="text-3xl font-extrabold text-emerald-600 mt-2">{stats.activeTenantsCount}</div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Upcoming Renewals</div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Upcoming Renewals</div>
                     <div className="text-3xl font-extrabold text-amber-600 mt-2">{stats.upcomingRenewalsCount}</div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Collected</div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Collected</div>
                     <div className="text-3xl font-extrabold text-indigo-600 mt-2">${Number(stats.totalCollected || 0).toLocaleString()}</div>
                 </div>
             </div>

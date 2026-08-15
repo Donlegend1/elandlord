@@ -7,39 +7,44 @@ export default function VerifyEmail({ status }) {
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('verification.send'));
     };
 
     return (
         <GuestLayout>
-            <Head title="Email Verification" />
+            <Head title="Verify Your Email - E-Landlord" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify
-                your email address by clicking on the link we just emailed to
-                you? If you didn't receive the email, we will gladly send you
-                another.
+            <div className="mb-2">
+                <span className="text-[11px] font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider">
+                    Email verification required
+                </span>
             </div>
 
+            <h2 className="text-xl font-bold text-slate-900 mt-3">Check your inbox</h2>
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                Thanks for creating your landlord account. Click the verification link we just emailed you before you can open the dashboard.
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+                If you do not see it, check spam, then resend the email below.
+            </p>
+
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address
-                    you provided during registration.
+                <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700">
+                    A new verification link has been sent to your email address.
                 </div>
             )}
 
             <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
+                <div className="mt-6 flex items-center justify-between gap-4">
                     <PrimaryButton disabled={processing}>
-                        Resend Verification Email
+                        {processing ? 'Sending…' : 'Resend Verification Email'}
                     </PrimaryButton>
 
                     <Link
                         href={route('logout')}
                         method="post"
                         as="button"
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        className="rounded-md text-sm text-slate-500 underline hover:text-slate-800"
                     >
                         Log Out
                     </Link>

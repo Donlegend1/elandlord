@@ -17,7 +17,15 @@ class Unit extends Model
         'bedrooms',
         'bathrooms',
         'status',
+        'image_path',
     ];
+
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path ? asset('storage/'.$this->image_path) : null;
+    }
 
     public function property()
     {

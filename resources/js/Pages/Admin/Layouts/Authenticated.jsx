@@ -8,10 +8,9 @@ export default function Authenticated({ children, header }) {
         {/* Header Navigation */}
         <header className="bg-slate-900 text-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
               <a href="/" className="flex items-center gap-2">
-              <span className="font-serif font-black tracking-widest text-lg uppercase text-white">Marete &amp; Co</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-maroon-600 px-2 py-0.5 rounded text-white">Admin</span>
+                <span className="font-sans font-black tracking-widest text-lg uppercase text-white">E-LANDLORD</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-600 px-2 py-0.5 rounded text-white">Admin</span>
               </a>
 
             </div>

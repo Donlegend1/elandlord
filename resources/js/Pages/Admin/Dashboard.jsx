@@ -16,8 +16,8 @@ export default function Dashboard({ stats }) {
         
         {/* Header Title */}
         <div>
-          <h2 className="font-serif text-3xl font-bold text-slate-900">Dashboard</h2>
-          <p className="text-slate-500 text-sm mt-1">Overview of Marete & Co Realty portfolio status and customer requests.</p>
+          <h2 className="font-serif text-3xl font-bold text-slate-900">Platform Admin Dashboard</h2>
+          <p className="text-slate-500 text-sm mt-1">Overview of E-Landlord property management metrics and active system records.</p>
         </div>
 
         {/* Stats Grid */}

@@ -11,7 +11,7 @@ export default function Seo({ title, description, path, image, schema }) {
     // Ensure we don't double slash if the env variable ends with /
     const baseUrl = (import.meta.env.VITE_APP_URL ?? '').replace(/\/$/, '');
     const url = `${baseUrl}${resolvedPath}`;
-    const siteName = "Marete & Co Realty";
+    const siteName = "E-Landlord Property Hub";
 
     const defaultImage = `${baseUrl}/images/og-cover.jpg`;
     const ogImage = image 

@@ -89,8 +89,8 @@ export default function Products({ products }) {
     const schema = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": "Marete & Co Realty Listings",
-        "description": "Exclusive portfolio of luxury houses, villas, townhouses, penthouses, and residential land plots for sale and rent in Nairobi.",
+        "name": "E-Landlord Property Listings",
+        "description": "Explore E-Landlord's portfolio of managed residential and commercial properties.",
         "url": `${baseUrl}/products`,
         "numberOfItems": products.length,
         "itemListElement": products.map((product, index) => ({
@@ -108,8 +108,8 @@ export default function Products({ products }) {
     return (
         <MainLayout>
             <Seo
-                title="Premium Nairobi Real Estate Listings"
-                description="Explore Marete & Co Realty's exclusive portfolio of luxury houses, villas, townhouses, penthouses, and residential land plots for sale and rent in Nairobi."
+                title="E-Landlord Managed Property Directory"
+                description="Explore E-Landlord's portfolio of managed residential and commercial properties."
                 path="/products"
                 schema={schema}
             />

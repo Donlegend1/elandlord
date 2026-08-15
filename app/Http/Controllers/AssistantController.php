@@ -57,6 +57,7 @@ class AssistantController extends Controller
             'role' => 'assistant',
             'password' => Hash::make($request->password),
             'created_by_user_id' => $user->id,
+            'email_verified_at' => now(),
         ]);
 
         if ($request->filled('property_ids')) {

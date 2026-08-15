@@ -28,12 +28,16 @@ export default function PropertiesIndex({ properties }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {properties.map((prop) => (
                     <div key={prop.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col hover:shadow-md transition">
-                        <div className="h-44 bg-gradient-to-tr from-slate-800 to-indigo-900 relative p-6 flex flex-col justify-end text-white">
-                            <span className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-2.5 py-1 rounded-md capitalize">
+                        <div className="h-44 bg-gradient-to-tr from-slate-800 to-indigo-900 relative overflow-hidden p-6 flex flex-col justify-end text-white">
+                            {prop.image_url && (
+                                <img src={prop.image_url} alt={prop.name} className="absolute inset-0 w-full h-full object-cover" />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                            <span className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-2.5 py-1 rounded-md capitalize z-10">
                                 {prop.type}
                             </span>
-                            <h3 className="text-xl font-extrabold tracking-tight leading-snug">{prop.name}</h3>
-                            <p className="text-xs text-slate-300 mt-1">📍 {prop.address}, {prop.city}, {prop.state}</p>
+                            <h3 className="relative text-xl font-extrabold tracking-tight leading-snug z-10">{prop.name}</h3>
+                            <p className="relative text-xs text-slate-300 mt-1 z-10">📍 {[prop.address, prop.city, prop.state, prop.country].filter(Boolean).join(', ')}</p>
                         </div>
                         <div className="p-6 flex-1 flex flex-col justify-between">
                             <div className="space-y-3">
@@ -51,13 +55,21 @@ export default function PropertiesIndex({ properties }) {
                                     </div>
                                 </div>
                             </div>
-                            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
                                 <Link
                                     href={route('properties.show', prop.id)}
-                                    className="w-full text-center bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-xs py-2.5 rounded-xl transition"
+                                    className="flex-1 text-center bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-xs py-2.5 rounded-xl transition"
                                 >
-                                    Manage Property & Units &rarr;
+                                    Manage
                                 </Link>
+                                {(['super_admin', 'landlord'].includes(user.role)) && (
+                                    <Link
+                                        href={route('properties.edit', prop.id)}
+                                        className="px-3 py-2.5 text-center bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold text-xs rounded-xl transition"
+                                    >
+                                        Edit
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>

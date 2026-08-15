@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Models\Lease;
+use App\Models\PaymentReceipt;
+use App\Models\Property;
 use App\Models\Testimonial;
+use App\Models\Unit;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -11,44 +14,40 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        // Query featured properties
-        $products = Product::latest()->take(6)->get();
-
         $stats = [
-            ['value' => 'KES 15B+', 'label' => 'Property Portfolio Managed'],
-            ['value' => '500+', 'label' => 'Luxury Homes Handled'],
-            ['value' => '12+', 'label' => 'Years of Excellence in Nairobi'],
-            ['value' => '98%', 'label' => 'Client Satisfaction Rate'],
+            ['value' => Property::count() ?: '50+', 'label' => 'Registered Properties'],
+            ['value' => Unit::count() ?: '250+', 'label' => 'Managed Units'],
+            ['value' => Lease::where('status', 'active')->count() ?: '180+', 'label' => 'Active Tenant Leases'],
+            ['value' => PaymentReceipt::count() ?: '1,200+', 'label' => 'Digital Receipts Issued'],
         ];
 
-        // Fetch approved testimonials dynamically
+        // Fetch approved testimonials to display on homepage
         $testimonials = Testimonial::where('is_approved', true)->latest()->get();
 
         $faqs = [
             [
-                'q' => 'Can foreigners buy property in Kenya?',
-                'a' => 'Yes, foreigners can purchase land and buildings in Kenya. However, under the Constitution, foreigners can only hold leasehold land for a term of up to 99 years, not freehold agricultural land, unless special exemptions apply.',
+                'q' => 'What is E-Landlord?',
+                'a' => 'E-Landlord is a full-featured digital property management platform built for landlords, with assistant and tenant portals invited by the owner. It digitizes property registration, tenant history, assistant property assignments, receipt generation, and lease renewal reminders.',
             ],
             [
-                'q' => 'What is the property buying process in Kenya?',
-                'a' => 'The process includes: 1) Selecting a property and signing an offer letter; 2) Performing an official search of the title deed; 3) Drafting and signing a Sale Agreement; 4) Paying the deposit (usually 10%-20%); 5) Paying stamp duty and registering the transfer of title under legal representation.',
+                'q' => 'Who can register on the public website?',
+                'a' => 'Only landlords and property owners can create an account from the Register page. You must verify your email before accessing the dashboard. Assistants and tenants are added by a landlord and then sign in — they cannot self-register.',
             ],
             [
-                'q' => 'How much is stamp duty in Kenya?',
-                'a' => 'Stamp duty is a tax paid to the government on property transfers. It is currently 4% of the property value for properties within municipalities/cities (like Nairobi) and 2% for properties in rural areas.',
+                'q' => 'How does property assignment to assistants work?',
+                'a' => 'Landlords can create assistant accounts and select specific properties for each assistant to manage. Assistants can only view tenants, issue receipts, and process maintenance for their assigned properties.',
             ],
             [
-                'q' => 'Do you manage rental properties on behalf of landlords?',
-                'a' => 'Yes, Marete & Co Realty offers full-service property management. We handle tenant sourcing, vetting, rent collection, routine maintenance, and monthly financial reporting, giving landlords complete peace of mind.',
+                'q' => 'How are digital payment receipts generated?',
+                'a' => 'When a rent payment is recorded, E-Landlord automatically generates an official digital receipt with a unique reference number (#EL-2026-XXXX). Receipts can be viewed, printed, or saved as PDF at any time by both landlords and tenants.',
             ],
             [
-                'q' => 'What is an off-plan property investment?',
-                'a' => 'Off-plan means purchasing a property before it is constructed, based on architectural designs and models. It offers lower pricing than completed projects and provides flexible payment plans over the construction period, yielding excellent capital gains.',
+                'q' => 'How do Lease Renewal Alerts work?',
+                'a' => 'E-Landlord tracks contract end dates and displays automated 30-day and 60-day warning alerts on the renewal dashboard, enabling 1-click lease extensions.',
             ],
         ];
 
         return Inertia::render('Home', [
-            'products' => $products,
             'stats' => $stats,
             'testimonials' => $testimonials,
             'faqs' => $faqs,

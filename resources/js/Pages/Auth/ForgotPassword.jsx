@@ -17,7 +17,7 @@ export default function ForgotPassword({ status }) {
 
     return (
         <GuestLayout>
-            <Head title="Forgot Password - Marete & Co Realty" />
+            <Head title="Forgot Password - E-Landlord Property Hub" />
 
             <h2 className="text-2xl font-serif font-black text-slate-950 mb-2 text-center">
                 Forgot Password?

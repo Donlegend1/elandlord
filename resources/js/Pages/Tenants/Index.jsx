@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 
 export default function TenantsIndex({ leases }) {
     return (
@@ -72,12 +72,27 @@ export default function TenantsIndex({ leases }) {
                                         </span>
                                     </td>
                                     <td className="py-4 px-6 text-right">
-                                        <Link
-                                            href={route('tenants.show', lease.tenant_user_id)}
-                                            className="inline-block bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-xs px-3 py-1.5 rounded-lg transition"
-                                        >
-                                            View Property History &rarr;
-                                        </Link>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Link
+                                                href={route('tenants.show', lease.tenant_user_id)}
+                                                className="inline-block bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-xs px-3 py-1.5 rounded-lg transition"
+                                            >
+                                                View
+                                            </Link>
+                                            {lease.status === 'active' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (confirm(`Remove ${lease.tenant?.name || 'this tenant'} from ${lease.property?.name || 'this property'}?`)) {
+                                                            router.delete(route('leases.destroy', lease.id));
+                                                        }
+                                                    }}
+                                                    className="inline-block bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold text-xs px-3 py-1.5 rounded-lg transition"
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

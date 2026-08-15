@@ -1,33 +1,54 @@
 <?php
 
+use App\Http\Controllers\Admin\LegalPageController as AdminLegalPageController;
 use App\Http\Controllers\AssistantController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LegalPageController;
+use App\Http\Controllers\ListingController;
+use App\Http\Controllers\ListingSettingsController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RenewalReminderController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TestimonialController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Landing / Welcome page
-Route::get('/', function () {
-    if (auth()->check()) {
-        return redirect()->route('dashboard');
-    }
-    return Inertia::render('Welcome');
-})->name('home');
+// Public client / visitor pages
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// Authenticated Routes
+Route::get('/about', fn () => Inertia::render('About'))->name('about');
+Route::get('/faq', fn () => Inertia::render('FAQ'))->name('faq');
+Route::get('/terms', [LegalPageController::class, 'terms'])->name('terms');
+Route::get('/privacy', [LegalPageController::class, 'privacy'])->name('privacy');
+Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+Route::get('/listings', [ListingController::class, 'index'])->name('listings.index');
+Route::get('/listings/{property}', [ListingController::class, 'show'])->name('listings.show');
+Route::post('/listings/{property}/inquire', [ListingController::class, 'inquire'])
+    ->middleware('throttle:5,1')
+    ->name('listings.inquire');
+Route::get('/locations/states', [LocationController::class, 'states'])->name('locations.states');
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+
+Route::post('/testimonials', [TestimonialController::class, 'store'])->name('testimonials.store');
+
 Route::middleware(['auth'])->group(function () {
-    // Dashboard (routed dynamically based on user role)
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/settings/listing', [ListingSettingsController::class, 'edit'])->name('settings.listing');
+    Route::patch('/settings/listing', [ListingSettingsController::class, 'update'])->name('settings.listing.update');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Properties Management
     Route::get('/properties', [PropertyController::class, 'index'])->name('properties.index');
@@ -42,8 +63,12 @@ Route::middleware(['auth'])->group(function () {
     // Tenants Management & History
     Route::get('/tenants', [TenantController::class, 'index'])->name('tenants.index');
     Route::get('/tenants/create', [TenantController::class, 'create'])->name('tenants.create');
+    Route::get('/tenants/lookup', [TenantController::class, 'lookup'])->name('tenants.lookup');
     Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
     Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
+    Route::get('/tenants/{tenant}/identification', [TenantController::class, 'identification'])->name('tenants.identification');
+    Route::delete('/tenants/{tenant}', [TenantController::class, 'destroy'])->name('tenants.destroy');
+    Route::delete('/leases/{lease}', [TenantController::class, 'removeLease'])->name('leases.destroy');
 
     // Assistant Management (Landlord only)
     Route::get('/assistants', [AssistantController::class, 'index'])->name('assistants.index');
@@ -63,6 +88,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
     Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
     Route::patch('/maintenance/{maintenanceRequest}/status', [MaintenanceController::class, 'updateStatus'])->name('maintenance.update-status');
+
+    Route::middleware('role:super_admin')->group(function () {
+        Route::get('/legal-pages', [AdminLegalPageController::class, 'index'])->name('legal-pages.index');
+        Route::get('/legal-pages/{legalPage}/edit', [AdminLegalPageController::class, 'edit'])->name('legal-pages.edit');
+        Route::put('/legal-pages/{legalPage}', [AdminLegalPageController::class, 'update'])->name('legal-pages.update');
+    });
 });
 
 require __DIR__.'/auth.php';

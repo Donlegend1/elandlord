@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Country;
 use App\Models\Property;
 use App\Models\PropertyAssignment;
+use App\Models\State;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class PropertyController extends Controller
@@ -38,6 +43,10 @@ class PropertyController extends Controller
 
         return Inertia::render('Properties/Create', [
             'assistants' => $assistants,
+            'countries' => Schema::hasTable('countries')
+                ? Country::query()->orderBy('name')->get(['id', 'name'])
+                : [],
+            'sizes' => Property::sizeOptions(),
         ]);
     }
 
@@ -47,40 +56,51 @@ class PropertyController extends Controller
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:100',
-            'state' => 'nullable|string|max:100',
+            'country_id' => 'required|exists:countries,id',
+            'state_id' => [
+                'required',
+                Rule::exists('states', 'id')->where(fn ($q) => $q->where('country_id', $request->country_id)),
+            ],
             'zip' => 'nullable|string|max:20',
             'type' => 'required|in:residential,commercial,multi-family,industrial',
+            'size' => 'required|in:studio,1_bedroom,2_bedroom,3_bedroom,4_bedroom,5_plus',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'units' => 'required|array|min:1',
             'units.*.unit_number' => 'required|string|max:50',
             'units.*.rent_amount' => 'required|numeric|min:0',
             'units.*.bedrooms' => 'nullable|integer',
             'units.*.bathrooms' => 'nullable|integer',
+            'units.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'assistant_ids' => 'nullable|array',
             'assistant_ids.*' => 'exists:users,id',
         ]);
 
         $user = $request->user();
 
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('properties', 'public');
-        }
+        $imagePath = $this->storePublicImage($request->file('image'), 'properties');
+
+        $country = Country::findOrFail($request->country_id);
+        $state = State::findOrFail($request->state_id);
 
         $property = Property::create([
             'landlord_id' => $user->isLandlord() ? $user->id : ($user->created_by_user_id ?? $user->id),
             'name' => $request->name,
             'address' => $request->address,
             'city' => $request->city,
-            'state' => $request->state,
+            'country' => $country->name,
+            'country_id' => $country->id,
+            'state' => $state->name,
+            'state_id' => $state->id,
             'zip' => $request->zip,
             'type' => $request->type,
+            'size' => $request->size,
             'description' => $request->description,
             'image_path' => $imagePath,
             'total_units' => count($request->units),
         ]);
 
-        foreach ($request->units as $unitData) {
+        foreach ($request->units as $index => $unitData) {
             Unit::create([
                 'property_id' => $property->id,
                 'unit_number' => $unitData['unit_number'],
@@ -89,6 +109,7 @@ class PropertyController extends Controller
                 'bedrooms' => $unitData['bedrooms'] ?? 1,
                 'bathrooms' => $unitData['bathrooms'] ?? 1,
                 'status' => 'vacant',
+                'image_path' => $this->storePublicImage($request->file("units.{$index}.image"), 'units'),
             ]);
         }
 
@@ -127,9 +148,22 @@ class PropertyController extends Controller
         $property->load('units');
         $assistants = $user->isLandlord() ? $user->createdAssistants : [];
 
+        $states = [];
+        if ($property->country_id && Schema::hasTable('states')) {
+            $states = State::query()
+                ->where('country_id', $property->country_id)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        }
+
         return Inertia::render('Properties/Edit', [
             'property' => $property,
             'assistants' => $assistants,
+            'countries' => Schema::hasTable('countries')
+                ? Country::query()->orderBy('name')->get(['id', 'name'])
+                : [],
+            'states' => $states,
+            'sizes' => Property::sizeOptions(),
         ]);
     }
 
@@ -142,13 +176,90 @@ class PropertyController extends Controller
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:100',
-            'state' => 'nullable|string|max:100',
+            'country_id' => 'required|exists:countries,id',
+            'state_id' => [
+                'required',
+                Rule::exists('states', 'id')->where(fn ($q) => $q->where('country_id', $request->country_id)),
+            ],
             'zip' => 'nullable|string|max:20',
             'type' => 'required|in:residential,commercial,multi-family,industrial',
+            'size' => 'required|in:studio,1_bedroom,2_bedroom,3_bedroom,4_bedroom,5_plus',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'units' => 'required|array|min:1',
+            'units.*.id' => 'nullable|integer',
+            'units.*.unit_number' => 'required|string|max:50',
+            'units.*.rent_amount' => 'required|numeric|min:0',
+            'units.*.bedrooms' => 'nullable|integer',
+            'units.*.bathrooms' => 'nullable|integer',
+            'units.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
-        $property->update($request->only(['name', 'address', 'city', 'state', 'zip', 'type', 'description']));
+        $country = Country::findOrFail($request->country_id);
+        $state = State::findOrFail($request->state_id);
+
+        $property->update([
+            'name' => $request->name,
+            'address' => $request->address,
+            'city' => $request->city,
+            'country' => $country->name,
+            'country_id' => $country->id,
+            'state' => $state->name,
+            'state_id' => $state->id,
+            'zip' => $request->zip,
+            'type' => $request->type,
+            'size' => $request->size,
+            'description' => $request->description,
+            'image_path' => $this->storePublicImage($request->file('image'), 'properties', $property->image_path) ?? $property->image_path,
+            'total_units' => count($request->units),
+        ]);
+
+        $keptIds = [];
+
+        foreach ($request->units as $index => $unitData) {
+            $imageFile = $request->file("units.{$index}.image");
+            $existing = null;
+
+            if (! empty($unitData['id'])) {
+                $existing = $property->units()->where('id', $unitData['id'])->first();
+            }
+
+            if ($existing) {
+                $existing->update([
+                    'unit_number' => $unitData['unit_number'],
+                    'rent_amount' => $unitData['rent_amount'],
+                    'deposit_amount' => $unitData['deposit_amount'] ?? $existing->deposit_amount,
+                    'bedrooms' => $unitData['bedrooms'] ?? $existing->bedrooms,
+                    'bathrooms' => $unitData['bathrooms'] ?? $existing->bathrooms,
+                    'image_path' => $this->storePublicImage($imageFile, 'units', $existing->image_path) ?? $existing->image_path,
+                ]);
+                $keptIds[] = $existing->id;
+                continue;
+            }
+
+            $created = Unit::create([
+                'property_id' => $property->id,
+                'unit_number' => $unitData['unit_number'],
+                'rent_amount' => $unitData['rent_amount'],
+                'deposit_amount' => $unitData['deposit_amount'] ?? $unitData['rent_amount'],
+                'bedrooms' => $unitData['bedrooms'] ?? 1,
+                'bathrooms' => $unitData['bathrooms'] ?? 1,
+                'status' => 'vacant',
+                'image_path' => $this->storePublicImage($imageFile, 'units'),
+            ]);
+            $keptIds[] = $created->id;
+        }
+
+        $property->units()
+            ->whereNotIn('id', $keptIds)
+            ->where('status', 'vacant')
+            ->get()
+            ->each(function (Unit $unit) {
+                $this->deletePublicImage($unit->image_path);
+                $unit->delete();
+            });
+
+        $property->update(['total_units' => $property->units()->count()]);
 
         return redirect()->route('properties.show', $property->id)->with('success', 'Property updated successfully.');
     }
@@ -159,6 +270,10 @@ class PropertyController extends Controller
         if (!$user->isSuperAdmin() && $property->landlord_id !== $user->id) {
             abort(403, 'Unauthorized');
         }
+
+        $property->load('units');
+        $this->deletePublicImage($property->image_path);
+        $property->units->each(fn (Unit $unit) => $this->deletePublicImage($unit->image_path));
 
         $property->delete();
         return redirect()->route('properties.index')->with('success', 'Property deleted successfully.');
@@ -198,5 +313,23 @@ class PropertyController extends Controller
         if (($user->isAssistant() || $user->isAgent()) && $user->assignedProperties->contains('id', $property->id)) return;
 
         abort(403, 'Access denied to this property.');
+    }
+
+    private function storePublicImage($file, string $directory, ?string $oldPath = null): ?string
+    {
+        if (! $file) {
+            return null;
+        }
+
+        $this->deletePublicImage($oldPath);
+
+        return $file->store($directory, 'public');
+    }
+
+    private function deletePublicImage(?string $path): void
+    {
+        if ($path) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

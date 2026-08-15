@@ -18,8 +18,8 @@ export default function Gallery() {
     const schema = {
         "@context": "https://schema.org",
         "@type": "ImageGallery",
-        "name": "Marete & Co Realty Portfolio Gallery",
-        "description": "Curated collection of visual portfolios for luxury villas, apartments, townhouses and premium plots in Nairobi.",
+        "name": "E-Landlord Property Portfolio Gallery",
+        "description": "Curated collection of visual portfolios for properties and apartments managed on E-Landlord.",
         "url": `${baseUrl}/gallery`,
         "image": galleryImages.map(img => img.src)
     };

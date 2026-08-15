@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'super_admin',
             'phone' => '+1 (555) 000-1111',
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
 
         // 2. Landlord / Owner
@@ -32,6 +33,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'landlord',
             'phone' => '+1 (555) 222-3333',
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
 
         // 3. Assistant (created by landlord)
@@ -42,6 +44,7 @@ class DatabaseSeeder extends Seeder
             'phone' => '+1 (555) 444-5555',
             'created_by_user_id' => $landlord->id,
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
 
         // 4. Agent
@@ -51,6 +54,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'agent',
             'phone' => '+1 (555) 666-7777',
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
 
         // 5. Tenants
@@ -61,6 +65,7 @@ class DatabaseSeeder extends Seeder
             'phone' => '+1 (555) 888-9999',
             'created_by_user_id' => $landlord->id,
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
 
         $tenant2 = User::create([
@@ -70,6 +75,27 @@ class DatabaseSeeder extends Seeder
             'phone' => '+1 (555) 999-0000',
             'created_by_user_id' => $landlord->id,
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
+
+        \App\Models\TenantProfile::create([
+            'user_id' => $tenant1->id,
+            'identification_type' => 'passport',
+            'identification_number' => 'P1234567',
+            'occupation' => 'Analyst',
+            'emergency_contact_name' => 'Mary Doe',
+            'emergency_contact_relationship' => 'Spouse',
+            'emergency_contact_phone' => '+1 (555) 111-2222',
+        ]);
+
+        \App\Models\TenantProfile::create([
+            'user_id' => $tenant2->id,
+            'identification_type' => 'national_id',
+            'identification_number' => 'NIN-998877',
+            'occupation' => 'Teacher',
+            'emergency_contact_name' => 'Paul Smith',
+            'emergency_contact_relationship' => 'Brother',
+            'emergency_contact_phone' => '+1 (555) 333-4444',
         ]);
 
         // Create Properties
@@ -232,5 +258,32 @@ class DatabaseSeeder extends Seeder
             'priority' => 'medium',
             'status' => 'in_progress',
         ]);
+
+        // Approved Testimonials for E-Landlord
+        \App\Models\Testimonial::create([
+            'name' => 'Marcus Vance',
+            'location' => 'Property Owner, Springfield',
+            'quote' => 'E-Landlord completely simplified how I manage my 12 rental units. Assigning my assistant Sarah to manage 8 of the units while keeping full financial oversight has saved me hours every week!',
+            'rating' => 5,
+            'is_approved' => true,
+        ]);
+
+        \App\Models\Testimonial::create([
+            'name' => 'Elena Rostova',
+            'location' => 'Assistant Manager',
+            'quote' => 'The assistant portal is brilliant. I can instantly issue digital payment receipts with official invoice numbers right after tenants pay their rent, and they receive them immediately.',
+            'rating' => 5,
+            'is_approved' => true,
+        ]);
+
+        \App\Models\Testimonial::create([
+            'name' => 'David Miller',
+            'location' => 'Tenant at Victoria Heights',
+            'quote' => 'Having a tenant portal to download printable rent receipts, check my lease end dates, and submit maintenance tickets directly to the property manager is super convenient!',
+            'rating' => 5,
+            'is_approved' => true,
+        ]);
+
+        $this->call(LegalPageSeeder::class);
     }
 }

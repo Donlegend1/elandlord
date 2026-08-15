@@ -18,10 +18,24 @@ class TestimonialController extends Controller
         ]);
 
         $validated['rating'] = $validated['rating'] ?? 5;
-        $validated['is_approved'] = true;
+        $validated['is_approved'] = false; // Requires admin approval to show on site
 
         Testimonial::create($validated);
 
-        return back()->with('success', 'Thank you! Your testimonial has been shared successfully.');
+        return back()->with('success', 'Thank you! Your testimonial has been submitted and is pending administrator review.');
+    }
+
+    public function toggleApproval(Request $request, Testimonial $testimonial): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || !$user->isSuperAdmin()) {
+            abort(403, 'Only Super Admins can approve testimonials.');
+        }
+
+        $testimonial->update([
+            'is_approved' => !$testimonial->is_approved,
+        ]);
+
+        return back()->with('success', 'Testimonial approval status updated.');
     }
 }

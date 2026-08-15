@@ -1,7 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 
-export default function TenantDashboard({ leases, activeLease, receipts, maintenanceRequests }) {
+export default function TenantDashboard({ leases, activeLease, activeLeases, receipts, maintenanceRequests }) {
+    const currentLeases = (activeLeases && activeLeases.length > 0)
+        ? activeLeases
+        : (activeLease ? [activeLease] : []);
     return (
         <AuthenticatedLayout
             header={
@@ -22,27 +25,34 @@ export default function TenantDashboard({ leases, activeLease, receipts, mainten
             <Head title="Tenant Portal" />
 
             {/* Active Lease Overview */}
-            {activeLease ? (
-                <div className="bg-gradient-to-r from-slate-900 to-indigo-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl mb-8">
+            {currentLeases.length > 0 ? (
+                <div className="space-y-4 mb-8">
+                    {currentLeases.length > 1 && (
+                        <p className="text-sm text-slate-500">You have {currentLeases.length} active leases across different properties.</p>
+                    )}
+                    {currentLeases.map((lease) => (
+                <div key={lease.id} className="bg-gradient-to-r from-slate-900 to-indigo-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
                             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                                 Active Lease Agreement
                             </span>
-                            <h3 className="text-2xl sm:text-3xl font-extrabold mt-3">{activeLease.property?.name}</h3>
-                            <p className="text-indigo-200 text-sm mt-1">{activeLease.property?.address}, {activeLease.property?.city} • Unit: <strong className="text-white">{activeLease.unit?.unit_number}</strong></p>
+                            <h3 className="text-2xl sm:text-3xl font-extrabold mt-3">{lease.property?.name}</h3>
+                            <p className="text-indigo-200 text-sm mt-1">{lease.property?.address}, {lease.property?.city} • Unit: <strong className="text-white">{lease.unit?.unit_number}</strong></p>
                             <div className="mt-4 flex flex-wrap items-center gap-6 text-xs text-indigo-100">
-                                <div>Monthly Rent: <strong className="text-white text-base">${Number(activeLease.rent_amount).toLocaleString()}</strong></div>
-                                <div>Lease Start: <strong className="text-white">{activeLease.lease_start}</strong></div>
-                                <div>Lease End: <strong className="text-amber-300 font-bold">{activeLease.lease_end}</strong></div>
+                                <div>Monthly Rent: <strong className="text-white text-base">${Number(lease.rent_amount).toLocaleString()}</strong></div>
+                                <div>Lease Start: <strong className="text-white">{lease.lease_start}</strong></div>
+                                <div>Lease End: <strong className="text-amber-300 font-bold">{lease.lease_end}</strong></div>
                             </div>
                         </div>
                         <div className="bg-white/10 p-4 rounded-xl backdrop-blur-xs border border-white/10 text-center">
                             <div className="text-xs text-indigo-200 uppercase font-semibold">Landlord / Owner</div>
-                            <div className="text-base font-bold text-white mt-1">{activeLease.landlord?.name}</div>
-                            <div className="text-xs text-indigo-200 mt-1">{activeLease.landlord?.email}</div>
+                            <div className="text-base font-bold text-white mt-1">{lease.landlord?.name}</div>
+                            <div className="text-xs text-indigo-200 mt-1">{lease.landlord?.email}</div>
                         </div>
                     </div>
+                </div>
+                    ))}
                 </div>
             ) : (
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 mb-8 text-center py-10">

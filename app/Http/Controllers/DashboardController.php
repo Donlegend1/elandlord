@@ -37,7 +37,7 @@ class DashboardController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            $activeLease = $leases->firstWhere('status', 'active');
+            $activeLeases = $leases->where('status', 'active')->values();
 
             $receipts = PaymentReceipt::with(['property', 'unit'])
                 ->where('tenant_user_id', $user->id)
@@ -52,7 +52,8 @@ class DashboardController extends Controller
 
             return Inertia::render('Dashboard/TenantDashboard', [
                 'leases' => $leases,
-                'activeLease' => $activeLease,
+                'activeLease' => $activeLeases->first(),
+                'activeLeases' => $activeLeases,
                 'receipts' => $receipts,
                 'maintenanceRequests' => $maintenanceRequests,
             ]);

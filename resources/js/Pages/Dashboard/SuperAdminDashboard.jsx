@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 export default function SuperAdminDashboard({ stats, recentUsers }) {
     return (
@@ -13,23 +13,37 @@ export default function SuperAdminDashboard({ stats, recentUsers }) {
         >
             <Head title="Super Admin Dashboard" />
 
-            {/* Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total System Users</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total System Users</div>
                     <div className="text-3xl font-extrabold text-slate-800 mt-2">{stats.totalUsers}</div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registered Landlords</div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Registered Landlords</div>
                     <div className="text-3xl font-extrabold text-blue-600 mt-2">{stats.totalLandlords}</div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Assistants Created</div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Assistants Created</div>
                     <div className="text-3xl font-extrabold text-emerald-600 mt-2">{stats.totalAssistants}</div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Platform Revenue</div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Platform Revenue</div>
                     <div className="text-3xl font-extrabold text-indigo-600 mt-2">${Number(stats.totalRevenue || 0).toLocaleString()}</div>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800">Public legal pages</h3>
+                        <p className="text-sm text-slate-500 mt-1">Edit Terms of Service and Privacy Policy shown on the website and registration form.</p>
+                    </div>
+                    <Link
+                        href={route('legal-pages.index')}
+                        className="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl"
+                    >
+                        Manage legal pages
+                    </Link>
                 </div>
             </div>
 

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function PropertiesShow({ property, assistants }) {
@@ -38,10 +38,18 @@ export default function PropertiesShow({ property, assistants }) {
                             <span className="text-xs text-slate-400">• Owner: {property.landlord?.name}</span>
                         </div>
                         <h2 className="text-2xl font-bold text-slate-800 mt-1">{property.name}</h2>
-                        <p className="text-xs text-slate-500">📍 {property.address}, {property.city}, {property.state} {property.zip}</p>
+                        <p className="text-xs text-slate-500">📍 {[property.address, property.city, property.state, property.country, property.zip].filter(Boolean).join(', ')}</p>
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {(['super_admin', 'landlord'].includes(user.role)) && (
+                            <Link
+                                href={route('properties.edit', property.id)}
+                                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-medium text-xs px-3.5 py-2 rounded-lg shadow-sm transition"
+                            >
+                                Edit Property
+                            </Link>
+                        )}
                         {(['super_admin', 'landlord'].includes(user.role)) && (
                             <button
                                 onClick={() => setShowAssignModal(true)}
@@ -63,6 +71,12 @@ export default function PropertiesShow({ property, assistants }) {
             <Head title={property.name} />
 
             {/* Property Overview */}
+            {property.image_url && (
+                <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200 h-56 sm:h-72">
+                    <img src={property.image_url} alt={property.name} className="w-full h-full object-cover" />
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                 <div className="lg:col-span-2 space-y-6">
                     {/* Units Table */}
@@ -72,6 +86,7 @@ export default function PropertiesShow({ property, assistants }) {
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                        <th className="py-3 px-3">Photo</th>
                                         <th className="py-3 px-3">Unit #</th>
                                         <th className="py-3 px-3">Specs</th>
                                         <th className="py-3 px-3">Monthly Rent</th>
@@ -82,6 +97,13 @@ export default function PropertiesShow({ property, assistants }) {
                                 <tbody className="divide-y divide-slate-100">
                                     {property.units?.map((unit) => (
                                         <tr key={unit.id}>
+                                            <td className="py-3 px-3">
+                                                {unit.image_url ? (
+                                                    <img src={unit.image_url} alt={unit.unit_number} className="h-12 w-16 rounded-lg object-cover border border-slate-200" />
+                                                ) : (
+                                                    <div className="h-12 w-16 rounded-lg bg-slate-100 border border-slate-200" />
+                                                )}
+                                            </td>
                                             <td className="py-3 px-3 font-bold text-slate-800">{unit.unit_number}</td>
                                             <td className="py-3 px-3 text-xs text-slate-500">{unit.bedrooms} Bed, {unit.bathrooms} Bath</td>
                                             <td className="py-3 px-3 font-bold text-slate-800">${Number(unit.rent_amount).toLocaleString()}</td>
@@ -94,9 +116,22 @@ export default function PropertiesShow({ property, assistants }) {
                                             </td>
                                             <td className="py-3 px-3 text-xs">
                                                 {unit.active_lease?.tenant ? (
-                                                    <Link href={route('tenants.show', unit.active_lease.tenant.id)} className="font-semibold text-indigo-600 hover:underline">
-                                                        {unit.active_lease.tenant.name}
-                                                    </Link>
+                                                    <div className="flex flex-col gap-1">
+                                                        <Link href={route('tenants.show', unit.active_lease.tenant.id)} className="font-semibold text-indigo-600 hover:underline">
+                                                            {unit.active_lease.tenant.name}
+                                                        </Link>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (confirm(`Remove ${unit.active_lease.tenant.name} from this unit?`)) {
+                                                                    router.delete(route('leases.destroy', unit.active_lease.id), { preserveScroll: true });
+                                                                }
+                                                            }}
+                                                            className="text-left text-[11px] font-semibold text-rose-600 hover:underline"
+                                                        >
+                                                            Remove tenant
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <span className="text-slate-400">Vacant</span>
                                                 )}

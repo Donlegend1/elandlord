@@ -11,23 +11,23 @@ class TestimonialSeeder extends Seeder
     {
         $testimonials = [
             [
-                'name' => 'Sarah Sterling',
-                'location' => 'Expats Community, Karen',
-                'quote' => 'Marete & Co helped us find our dream home in Karen. Their attention to detail, discrete representation, and unmatched negotiation skills were outstanding.',
+                'name' => 'Marcus Vance',
+                'location' => 'Property Owner, Springfield',
+                'quote' => 'E-Landlord completely simplified how I manage my 12 rental units. Assigning my assistant Sarah to manage 8 of the units while keeping full financial oversight has saved me hours every week!',
                 'rating' => 5,
                 'is_approved' => true,
             ],
             [
-                'name' => 'David Mwangi',
-                'location' => 'Investor, Westlands',
-                'quote' => 'I have worked with Marete & Co on several off-plan and land acquisitions. They are the most professional and transparent real estate advisory in Kenya.',
+                'name' => 'Elena Rostova',
+                'location' => 'Assistant Manager',
+                'quote' => 'The assistant portal is brilliant. I can instantly issue digital payment receipts with official invoice numbers right after tenants pay their rent, and they receive them immediately.',
                 'rating' => 5,
                 'is_approved' => true,
             ],
             [
-                'name' => 'H. E. Ambassador Jean-Pierre',
-                'location' => 'Diplomatic Blue Zone, Runda',
-                'quote' => 'Finding a home that meets our stringent security requirements was a challenge. Marete & Co delivered the perfect villa with speed and absolute privacy.',
+                'name' => 'David Miller',
+                'location' => 'Tenant at Victoria Heights',
+                'quote' => 'Having a tenant portal to download printable rent receipts, check my lease end dates, and submit maintenance tickets directly to the property manager is super convenient!',
                 'rating' => 5,
                 'is_approved' => true,
             ],

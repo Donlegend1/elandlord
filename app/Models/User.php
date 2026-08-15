@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
@@ -22,6 +22,7 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'public_contact_display',
         'avatar',
         'created_by_user_id',
     ];
@@ -97,5 +98,10 @@ class User extends Authenticatable
     public function tenantLeases()
     {
         return $this->hasMany(Lease::class, 'tenant_user_id');
+    }
+
+    public function tenantProfile()
+    {
+        return $this->hasOne(TenantProfile::class);
     }
 }
