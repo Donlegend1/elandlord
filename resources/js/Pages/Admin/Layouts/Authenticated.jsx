@@ -12,8 +12,6 @@ export default function Authenticated({ children, header }) {
                 <span className="font-sans font-black tracking-widest text-lg uppercase text-white">E-LANDLORD</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-600 px-2 py-0.5 rounded text-white">Admin</span>
               </a>
-
-            </div>
             
             <nav className="flex items-center gap-6 text-sm font-semibold tracking-wide">
               <Link href="/admin/dashboard" className="text-slate-300 hover:text-white transition-colors">Dashboard</Link>

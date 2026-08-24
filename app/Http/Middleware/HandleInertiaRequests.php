@@ -6,7 +6,9 @@ use App\Models\Lease;
 use App\Models\MaintenanceRequest;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\UnitQuota;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -43,6 +45,13 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'notifications' => fn () => $this->notificationsFor($request->user()),
+            'billing' => function () use ($request) {
+                if (! Schema::hasTable('landlord_subscriptions')) {
+                    return null;
+                }
+
+                return app(UnitQuota::class)->payload($request->user());
+            },
         ];
     }
 

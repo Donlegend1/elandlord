@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PhotoGallery from '@/Components/PhotoGallery';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -71,9 +72,9 @@ export default function PropertiesShow({ property, assistants }) {
             <Head title={property.name} />
 
             {/* Property Overview */}
-            {property.image_url && (
-                <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200 h-56 sm:h-72">
-                    <img src={property.image_url} alt={property.name} className="w-full h-full object-cover" />
+            {(property.image_urls?.length > 0 || property.image_url) && (
+                <div className="mb-8">
+                    <PhotoGallery images={property.image_urls?.length ? property.image_urls : [property.image_url]} alt={property.name} />
                 </div>
             )}
 
@@ -98,8 +99,12 @@ export default function PropertiesShow({ property, assistants }) {
                                     {property.units?.map((unit) => (
                                         <tr key={unit.id}>
                                             <td className="py-3 px-3">
-                                                {unit.image_url ? (
-                                                    <img src={unit.image_url} alt={unit.unit_number} className="h-12 w-16 rounded-lg object-cover border border-slate-200" />
+                                                {(unit.image_urls?.length ? unit.image_urls : (unit.image_url ? [unit.image_url] : [])).length > 0 ? (
+                                                    <div className="flex -space-x-2">
+                                                        {(unit.image_urls?.length ? unit.image_urls : [unit.image_url]).slice(0, 3).map((url, i) => (
+                                                            <img key={url + i} src={url} alt="" className="h-12 w-12 rounded-lg object-cover border border-white shadow-sm" />
+                                                        ))}
+                                                    </div>
                                                 ) : (
                                                     <div className="h-12 w-16 rounded-lg bg-slate-100 border border-slate-200" />
                                                 )}

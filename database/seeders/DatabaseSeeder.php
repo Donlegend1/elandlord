@@ -177,6 +177,7 @@ class DatabaseSeeder extends Seeder
             'bedrooms' => 4,
             'bathrooms' => 3,
             'status' => 'vacant',
+            'description' => 'Top-floor penthouse with a private terrace, open-plan living area, and city views. Includes two ensuite bedrooms, a study, and underground parking.',
         ]);
 
         $unit2A = Unit::create([
@@ -285,5 +286,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(LegalPageSeeder::class);
+        $this->call(BillingSeeder::class);
     }
 }

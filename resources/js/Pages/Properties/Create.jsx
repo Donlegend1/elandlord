@@ -1,9 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ImagePicker from '@/Components/ImagePicker';
 import { Head, useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 
-export default function PropertiesCreate({ assistants, countries = [], sizes = [] }) {
+export default function PropertiesCreate({ assistants, countries = [], sizes = [], quota }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         address: '',
@@ -14,9 +15,9 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
         type: 'residential',
         size: '2_bedroom',
         description: '',
-        image: null,
+        images: [],
         units: [
-            { unit_number: 'Apt 1A', rent_amount: '1500', deposit_amount: '1500', bedrooms: 2, bathrooms: 1, image: null }
+            { unit_number: 'Apt 1A', rent_amount: '1500', deposit_amount: '1500', bedrooms: 2, bathrooms: 1, description: '', images: [] }
         ],
         assistant_ids: [],
     });
@@ -65,9 +66,10 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
     };
 
     const addUnitRow = () => {
+        if (quota?.remaining != null && data.units.length >= quota.remaining) return;
         setData('units', [
             ...data.units,
-            { unit_number: `Unit ${data.units.length + 1}`, rent_amount: '1000', deposit_amount: '1000', bedrooms: 1, bathrooms: 1, image: null }
+            { unit_number: `Unit ${data.units.length + 1}`, rent_amount: '1000', deposit_amount: '1000', bedrooms: 1, bathrooms: 1, description: '', images: [] }
         ]);
     };
 
@@ -95,14 +97,15 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
         e.preventDefault();
         transform((form) => ({
             ...form,
-            image: form.image instanceof File ? form.image : null,
+            images: (form.images || []).filter((file) => file instanceof File),
             units: form.units.map((unit) => ({
                 unit_number: unit.unit_number,
                 rent_amount: unit.rent_amount,
                 deposit_amount: unit.deposit_amount,
                 bedrooms: unit.bedrooms,
                 bathrooms: unit.bathrooms,
-                image: unit.image instanceof File ? unit.image : null,
+                description: unit.description,
+                images: (unit.images || []).filter((file) => file instanceof File),
             })),
         }));
         post(route('properties.store'), { forceFormData: true });
@@ -118,6 +121,13 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
             }
         >
             <Head title="Register Property" />
+
+            {quota && quota.limit !== null && (
+                <div className={'mb-6 rounded-2xl p-4 text-sm border ' + (quota.can_add ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-amber-50 border-amber-200 text-amber-900')}>
+                    Free plan: {quota.used} / {quota.limit} units used.
+                    {quota.can_add ? ` You can add ${quota.remaining} more.` : <> Subscribe on the <a href={route('billing.index')} className="font-bold underline">billing page</a> to add more units.</>}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
                 {/* Property Basics */}
@@ -260,15 +270,13 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
                         </div>
 
                         <div className="sm:col-span-2">
-                            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Property Photo</label>
-                            <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
-                                onChange={e => setData('image', e.target.files[0] || null)}
+                            <ImagePicker
+                                label="Property Photos"
+                                files={data.images}
+                                onChange={(files) => setData('images', files)}
+                                max={12}
+                                error={errors.images || errors['images.0']}
                             />
-                            {data.image && <p className="text-xs text-slate-500 mt-1">{data.image.name}</p>}
-                            {errors.image && <span className="text-xs text-rose-500">{errors.image}</span>}
                         </div>
 
                         <div className="sm:col-span-2">
@@ -294,7 +302,8 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
                         <button
                             type="button"
                             onClick={addUnitRow}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3 py-2 rounded-lg transition"
+                            disabled={quota?.remaining != null && data.units.length >= quota.remaining}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3 py-2 rounded-lg transition disabled:opacity-40"
                         >
                             + Add Unit
                         </button>
@@ -355,15 +364,23 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
                                 </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Unit photo</label>
-                                    <input
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:font-semibold file:text-indigo-700"
-                                        onChange={e => updateUnitField(idx, 'image', e.target.files[0] || null)}
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Unit description</label>
+                                    <textarea
+                                        className="w-full rounded-lg border-slate-200 text-xs mt-1"
+                                        rows="2"
+                                        placeholder="Layout, finishes, views, and what makes this unit unique…"
+                                        value={unit.description || ''}
+                                        onChange={(e) => updateUnitField(idx, 'description', e.target.value)}
                                     />
-                                    {unit.image?.name && <p className="text-[11px] text-slate-500 mt-1">{unit.image.name}</p>}
-                                    {errors[`units.${idx}.image`] && <span className="text-xs text-rose-500">{errors[`units.${idx}.image`]}</span>}
+                                </div>
+                                <div>
+                                    <ImagePicker
+                                        label="Unit photos"
+                                        files={unit.images || []}
+                                        onChange={(files) => updateUnitField(idx, 'images', files)}
+                                        max={8}
+                                        error={errors[`units.${idx}.images`] || errors[`units.${idx}.images.0`]}
+                                    />
                                 </div>
                             </div>
                         ))}
@@ -397,10 +414,10 @@ export default function PropertiesCreate({ assistants, countries = [], sizes = [
                 <div className="flex justify-end gap-4">
                     <button
                         type="submit"
-                        disabled={processing}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-md transition"
+                        disabled={processing || (quota?.remaining === 0)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-md transition disabled:opacity-50"
                     >
-                        {processing ? 'Registering Property...' : 'Save & Register Property'}
+                        {processing ? 'Registering Property...' : quota?.remaining === 0 ? 'Subscribe to add units' : 'Save & Register Property'}
                     </button>
                 </div>
             </form>

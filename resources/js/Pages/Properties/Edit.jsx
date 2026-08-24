@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ImagePicker from '@/Components/ImagePicker';
 import { Head, Link, useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
@@ -12,7 +13,7 @@ const sizeFallback = [
     { value: '5_plus', label: '5+ Bedrooms' },
 ];
 
-export default function PropertiesEdit({ property, countries = [], states: initialStates = [], sizes = [] }) {
+export default function PropertiesEdit({ property, countries = [], states: initialStates = [], sizes = [], quota }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         _method: 'put',
         name: property.name || '',
@@ -24,7 +25,8 @@ export default function PropertiesEdit({ property, countries = [], states: initi
         type: property.type || 'residential',
         size: property.size || '2_bedroom',
         description: property.description || '',
-        image: null,
+        images: [],
+        remove_image_ids: [],
         units: (property.units || []).map((unit) => ({
             id: unit.id,
             unit_number: unit.unit_number,
@@ -32,15 +34,17 @@ export default function PropertiesEdit({ property, countries = [], states: initi
             deposit_amount: unit.deposit_amount,
             bedrooms: unit.bedrooms,
             bathrooms: unit.bathrooms,
+            description: unit.description || '',
             status: unit.status,
-            image: null,
-            image_url: unit.image_url,
+            images: [],
+            existing_images: (unit.images || []).map((image) => ({ id: image.id, url: image.url })),
+            remove_image_ids: [],
         })),
     });
 
     const [states, setStates] = useState(initialStates);
     const [loadingStates, setLoadingStates] = useState(false);
-    const [imagePreview, setImagePreview] = useState(property.image_url || null);
+    const existingPropertyImages = (property.images || []).map((image) => ({ id: image.id, url: image.url }));
 
     useEffect(() => {
         if (!data.country_id) {
@@ -82,10 +86,14 @@ export default function PropertiesEdit({ property, countries = [], states: initi
         });
     };
 
+    const existingUnitCount = (property.units || []).length;
+    const maxUnits = quota?.limit == null ? null : Math.max(existingUnitCount, quota.limit - (quota.used - existingUnitCount));
+
     const addUnitRow = () => {
+        if (maxUnits != null && data.units.length >= maxUnits) return;
         setData('units', [
             ...data.units,
-            { unit_number: `Unit ${data.units.length + 1}`, rent_amount: '1000', deposit_amount: '1000', bedrooms: 1, bathrooms: 1, status: 'vacant', image: null, image_url: null },
+            { unit_number: `Unit ${data.units.length + 1}`, rent_amount: '1000', deposit_amount: '1000', bedrooms: 1, bathrooms: 1, description: '', status: 'vacant', images: [], existing_images: [], remove_image_ids: [] },
         ]);
     };
 
@@ -106,7 +114,8 @@ export default function PropertiesEdit({ property, countries = [], states: initi
         e.preventDefault();
         transform((form) => ({
             ...form,
-            image: form.image instanceof File ? form.image : null,
+            images: (form.images || []).filter((file) => file instanceof File),
+            remove_image_ids: form.remove_image_ids || [],
             units: form.units.map((unit) => ({
                 id: unit.id || undefined,
                 unit_number: unit.unit_number,
@@ -114,7 +123,9 @@ export default function PropertiesEdit({ property, countries = [], states: initi
                 deposit_amount: unit.deposit_amount,
                 bedrooms: unit.bedrooms,
                 bathrooms: unit.bathrooms,
-                image: unit.image instanceof File ? unit.image : null,
+                description: unit.description,
+                images: (unit.images || []).filter((file) => file instanceof File),
+                remove_image_ids: unit.remove_image_ids || [],
             })),
         }));
         post(route('properties.update', property.id), { forceFormData: true });
@@ -132,6 +143,13 @@ export default function PropertiesEdit({ property, countries = [], states: initi
             }
         >
             <Head title={`Edit ${property.name}`} />
+
+            {quota && quota.limit !== null && (
+                <div className="mb-6 rounded-2xl p-4 text-sm border bg-slate-50 border-slate-200 text-slate-700">
+                    Free plan: {quota.used} / {quota.limit} units used.
+                    {quota.can_add ? ` You can add ${quota.remaining} more.` : <> Subscribe on the <Link href={route('billing.index')} className="font-bold underline">billing page</Link> to add more units.</>}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
                 <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
@@ -244,25 +262,15 @@ export default function PropertiesEdit({ property, countries = [], states: initi
                         </div>
 
                         <div className="sm:col-span-2">
-                            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Property Photo</label>
-                            {(imagePreview || property.image_url) && (
-                                <img
-                                    src={imagePreview || property.image_url}
-                                    alt={property.name}
-                                    className="mb-3 h-40 w-full rounded-xl object-cover border border-slate-200"
-                                />
-                            )}
-                            <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
-                                onChange={(e) => {
-                                    const file = e.target.files[0] || null;
-                                    setData('image', file);
-                                    setImagePreview(file ? URL.createObjectURL(file) : property.image_url);
-                                }}
+                            <ImagePicker
+                                label="Property Photos"
+                                files={data.images}
+                                onChange={(files) => setData('images', files)}
+                                existing={existingPropertyImages.filter((image) => !data.remove_image_ids.includes(image.id))}
+                                onRemoveExisting={(id) => setData('remove_image_ids', [...data.remove_image_ids, id])}
+                                max={12}
+                                error={errors.images || errors['images.0']}
                             />
-                            {errors.image && <span className="text-xs text-rose-500">{errors.image}</span>}
                         </div>
 
                         <div className="sm:col-span-2">
@@ -286,7 +294,8 @@ export default function PropertiesEdit({ property, countries = [], states: initi
                         <button
                             type="button"
                             onClick={addUnitRow}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3 py-2 rounded-lg transition"
+                            disabled={maxUnits != null && data.units.length >= maxUnits}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3 py-2 rounded-lg transition disabled:opacity-40"
                         >
                             + Add Unit
                         </button>
@@ -349,21 +358,25 @@ export default function PropertiesEdit({ property, countries = [], states: initi
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    {unit.image_url && !unit.image && (
-                                        <img src={unit.image_url} alt={unit.unit_number} className="h-16 w-20 rounded-lg object-cover border border-slate-200" />
-                                    )}
-                                    <div className="flex-1">
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Unit photo</label>
-                                        <input
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp"
-                                            className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:font-semibold file:text-indigo-700"
-                                            onChange={(e) => updateUnitField(idx, 'image', e.target.files[0] || null)}
-                                        />
-                                        {unit.image?.name && <p className="text-[11px] text-slate-500 mt-1">{unit.image.name}</p>}
-                                    </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Unit description</label>
+                                    <textarea
+                                        className="w-full rounded-lg border-slate-200 text-xs mt-1"
+                                        rows="2"
+                                        placeholder="Layout, finishes, views, and what makes this unit unique…"
+                                        value={unit.description || ''}
+                                        onChange={(e) => updateUnitField(idx, 'description', e.target.value)}
+                                    />
                                 </div>
+                                <ImagePicker
+                                    label="Unit photos"
+                                    files={unit.images || []}
+                                    onChange={(files) => updateUnitField(idx, 'images', files)}
+                                    existing={(unit.existing_images || []).filter((image) => !(unit.remove_image_ids || []).includes(image.id))}
+                                    onRemoveExisting={(id) => updateUnitField(idx, 'remove_image_ids', [...(unit.remove_image_ids || []), id])}
+                                    max={8}
+                                    error={errors[`units.${idx}.images`] || errors[`units.${idx}.images.0`]}
+                                />
                             </div>
                         ))}
                     </div>

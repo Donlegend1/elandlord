@@ -18,13 +18,33 @@ class Unit extends Model
         'bathrooms',
         'status',
         'image_path',
+        'description',
     ];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'image_urls'];
 
     public function getImageUrlAttribute(): ?string
     {
-        return $this->image_path ? asset('storage/'.$this->image_path) : null;
+        return $this->imageUrls()[0] ?? null;
+    }
+
+    public function getImageUrlsAttribute(): array
+    {
+        return $this->imageUrls();
+    }
+
+    public function imageUrls(): array
+    {
+        if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
+            return $this->images->map->url->values()->all();
+        }
+
+        return $this->image_path ? array_values(array_filter([GalleryImage::publicUrl($this->image_path)])) : [];
+    }
+
+    public function images()
+    {
+        return $this->morphMany(GalleryImage::class, 'imageable')->orderBy('sort_order');
     }
 
     public function property()

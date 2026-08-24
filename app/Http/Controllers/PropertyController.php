@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\GalleryImage;
 use App\Models\Property;
 use App\Models\PropertyAssignment;
 use App\Models\State;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\UnitQuota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -20,7 +21,7 @@ class PropertyController extends Controller
     {
         $user = $request->user();
 
-        $query = Property::with(['units', 'landlord', 'assignedUsers']);
+        $query = Property::with(['units.images', 'images', 'landlord', 'assignedUsers']);
 
         if ($user->isLandlord()) {
             $query->where('landlord_id', $user->id);
@@ -33,6 +34,7 @@ class PropertyController extends Controller
 
         return Inertia::render('Properties/Index', [
             'properties' => $properties,
+            'quota' => app(UnitQuota::class)->payload($user),
         ]);
     }
 
@@ -47,6 +49,7 @@ class PropertyController extends Controller
                 ? Country::query()->orderBy('name')->get(['id', 'name'])
                 : [],
             'sizes' => Property::sizeOptions(),
+            'quota' => app(UnitQuota::class)->payload($user),
         ]);
     }
 
@@ -65,20 +68,26 @@ class PropertyController extends Controller
             'type' => 'required|in:residential,commercial,multi-family,industrial',
             'size' => 'required|in:studio,1_bedroom,2_bedroom,3_bedroom,4_bedroom,5_plus',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'images' => 'nullable|array|max:12',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
             'units' => 'required|array|min:1',
             'units.*.unit_number' => 'required|string|max:50',
             'units.*.rent_amount' => 'required|numeric|min:0',
             'units.*.bedrooms' => 'nullable|integer',
             'units.*.bathrooms' => 'nullable|integer',
-            'units.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'units.*.description' => 'nullable|string',
+            'units.*.images' => 'nullable|array|max:8',
+            'units.*.images.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
             'assistant_ids' => 'nullable|array',
             'assistant_ids.*' => 'exists:users,id',
         ]);
 
         $user = $request->user();
+        $quota = app(UnitQuota::class);
 
-        $imagePath = $this->storePublicImage($request->file('image'), 'properties');
+        if ($user->isLandlord() && ! $quota->canAdd($user, count($request->units))) {
+            return back()->with('error', $quota->blockMessage($user));
+        }
 
         $country = Country::findOrFail($request->country_id);
         $state = State::findOrFail($request->state_id);
@@ -96,21 +105,23 @@ class PropertyController extends Controller
             'type' => $request->type,
             'size' => $request->size,
             'description' => $request->description,
-            'image_path' => $imagePath,
             'total_units' => count($request->units),
         ]);
 
+        $this->storeGalleryImages($property, $this->uploadedFiles($request, 'images'), 'properties');
+
         foreach ($request->units as $index => $unitData) {
-            Unit::create([
+            $unit = Unit::create([
                 'property_id' => $property->id,
                 'unit_number' => $unitData['unit_number'],
                 'rent_amount' => $unitData['rent_amount'],
                 'deposit_amount' => $unitData['deposit_amount'] ?? $unitData['rent_amount'],
                 'bedrooms' => $unitData['bedrooms'] ?? 1,
                 'bathrooms' => $unitData['bathrooms'] ?? 1,
+                'description' => $unitData['description'] ?? null,
                 'status' => 'vacant',
-                'image_path' => $this->storePublicImage($request->file("units.{$index}.image"), 'units'),
             ]);
+            $this->storeGalleryImages($unit, $this->uploadedFiles($request, "units.{$index}.images"), 'units');
         }
 
         if ($request->filled('assistant_ids')) {
@@ -131,7 +142,7 @@ class PropertyController extends Controller
         $user = $request->user();
         $this->authorizePropertyAccess($user, $property);
 
-        $property->load(['units.activeLease.tenant', 'landlord', 'assignedUsers', 'leases.tenant', 'maintenanceRequests.tenant']);
+        $property->load(['units.images', 'units.activeLease.tenant', 'images', 'landlord', 'assignedUsers', 'leases.tenant', 'maintenanceRequests.tenant']);
         $assistants = $user->isLandlord() ? $user->createdAssistants : [];
 
         return Inertia::render('Properties/Show', [
@@ -145,7 +156,7 @@ class PropertyController extends Controller
         $user = $request->user();
         $this->authorizePropertyAccess($user, $property);
 
-        $property->load('units');
+        $property->load(['units.images', 'images']);
         $assistants = $user->isLandlord() ? $user->createdAssistants : [];
 
         $states = [];
@@ -164,6 +175,7 @@ class PropertyController extends Controller
                 : [],
             'states' => $states,
             'sizes' => Property::sizeOptions(),
+            'quota' => app(UnitQuota::class)->payload($user),
         ]);
     }
 
@@ -185,15 +197,30 @@ class PropertyController extends Controller
             'type' => 'required|in:residential,commercial,multi-family,industrial',
             'size' => 'required|in:studio,1_bedroom,2_bedroom,3_bedroom,4_bedroom,5_plus',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'images' => 'nullable|array|max:12',
+            'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
+            'remove_image_ids' => 'nullable|array',
+            'remove_image_ids.*' => 'integer',
             'units' => 'required|array|min:1',
             'units.*.id' => 'nullable|integer',
             'units.*.unit_number' => 'required|string|max:50',
             'units.*.rent_amount' => 'required|numeric|min:0',
             'units.*.bedrooms' => 'nullable|integer',
             'units.*.bathrooms' => 'nullable|integer',
-            'units.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'units.*.description' => 'nullable|string',
+            'units.*.images' => 'nullable|array|max:8',
+            'units.*.images.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
+            'units.*.remove_image_ids' => 'nullable|array',
+            'units.*.remove_image_ids.*' => 'integer',
         ]);
+
+        $quota = app(UnitQuota::class);
+        $existingCount = $property->units()->count();
+        $delta = count($request->units) - $existingCount;
+
+        if ($user->isLandlord() && $delta > 0 && ! $quota->canAdd($user, $delta)) {
+            return back()->with('error', $quota->blockMessage($user));
+        }
 
         $country = Country::findOrFail($request->country_id);
         $state = State::findOrFail($request->state_id);
@@ -210,14 +237,15 @@ class PropertyController extends Controller
             'type' => $request->type,
             'size' => $request->size,
             'description' => $request->description,
-            'image_path' => $this->storePublicImage($request->file('image'), 'properties', $property->image_path) ?? $property->image_path,
             'total_units' => count($request->units),
         ]);
+
+        $this->removeGalleryImages($property, $request->input('remove_image_ids', []));
+        $this->storeGalleryImages($property, $this->uploadedFiles($request, 'images'), 'properties');
 
         $keptIds = [];
 
         foreach ($request->units as $index => $unitData) {
-            $imageFile = $request->file("units.{$index}.image");
             $existing = null;
 
             if (! empty($unitData['id'])) {
@@ -231,8 +259,10 @@ class PropertyController extends Controller
                     'deposit_amount' => $unitData['deposit_amount'] ?? $existing->deposit_amount,
                     'bedrooms' => $unitData['bedrooms'] ?? $existing->bedrooms,
                     'bathrooms' => $unitData['bathrooms'] ?? $existing->bathrooms,
-                    'image_path' => $this->storePublicImage($imageFile, 'units', $existing->image_path) ?? $existing->image_path,
+                    'description' => $unitData['description'] ?? null,
                 ]);
+                $this->removeGalleryImages($existing, $unitData['remove_image_ids'] ?? []);
+                $this->storeGalleryImages($existing, $this->uploadedFiles($request, "units.{$index}.images"), 'units');
                 $keptIds[] = $existing->id;
                 continue;
             }
@@ -244,9 +274,10 @@ class PropertyController extends Controller
                 'deposit_amount' => $unitData['deposit_amount'] ?? $unitData['rent_amount'],
                 'bedrooms' => $unitData['bedrooms'] ?? 1,
                 'bathrooms' => $unitData['bathrooms'] ?? 1,
+                'description' => $unitData['description'] ?? null,
                 'status' => 'vacant',
-                'image_path' => $this->storePublicImage($imageFile, 'units'),
             ]);
+            $this->storeGalleryImages($created, $this->uploadedFiles($request, "units.{$index}.images"), 'units');
             $keptIds[] = $created->id;
         }
 
@@ -255,7 +286,7 @@ class PropertyController extends Controller
             ->where('status', 'vacant')
             ->get()
             ->each(function (Unit $unit) {
-                $this->deletePublicImage($unit->image_path);
+                $this->deleteAllGalleryImages($unit);
                 $unit->delete();
             });
 
@@ -271,9 +302,9 @@ class PropertyController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $property->load('units');
-        $this->deletePublicImage($property->image_path);
-        $property->units->each(fn (Unit $unit) => $this->deletePublicImage($unit->image_path));
+        $property->load(['units.images', 'images']);
+        $property->units->each(fn (Unit $unit) => $this->deleteAllGalleryImages($unit));
+        $this->deleteAllGalleryImages($property);
 
         $property->delete();
         return redirect()->route('properties.index')->with('success', 'Property deleted successfully.');
@@ -315,21 +346,64 @@ class PropertyController extends Controller
         abort(403, 'Access denied to this property.');
     }
 
-    private function storePublicImage($file, string $directory, ?string $oldPath = null): ?string
+    private function uploadedFiles(Request $request, string $key): array
     {
-        if (! $file) {
-            return null;
+        $files = $request->file($key);
+
+        if (! $files) {
+            return [];
         }
 
-        $this->deletePublicImage($oldPath);
-
-        return $file->store($directory, 'public');
+        return is_array($files) ? array_values(array_filter($files)) : [$files];
     }
 
-    private function deletePublicImage(?string $path): void
+    private function storeGalleryImages($model, array $files, string $directory): void
     {
-        if ($path) {
-            Storage::disk('public')->delete($path);
+        if ($files === []) {
+            return;
         }
+
+        $sort = (int) $model->images()->max('sort_order');
+
+        foreach ($files as $file) {
+            $sort++;
+            $model->images()->create([
+                'path' => GalleryImage::storeUpload($file, $directory),
+                'sort_order' => $sort,
+            ]);
+        }
+
+        $this->syncCoverImage($model);
+    }
+
+    private function removeGalleryImages($model, array $ids): void
+    {
+        $ids = array_values(array_filter($ids));
+
+        if ($ids === []) {
+            return;
+        }
+
+        $model->images()->whereIn('id', $ids)->get()->each(function ($image) {
+            $image->deleteFile();
+            $image->delete();
+        });
+
+        $this->syncCoverImage($model);
+    }
+
+    private function deleteAllGalleryImages($model): void
+    {
+        $model->loadMissing('images');
+        $model->images->each(function ($image) {
+            $image->deleteFile();
+            $image->delete();
+        });
+    }
+
+    private function syncCoverImage($model): void
+    {
+        $first = $model->images()->orderBy('sort_order')->first();
+        $model->update(['image_path' => $first?->path]);
     }
 }

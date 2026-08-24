@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\ListingContactUnlock;
 use App\Models\Property;
 use App\Models\PropertyInquiry;
+use App\Models\BillingSetting;
 use App\Models\State;
+use App\Services\PaystackService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -23,7 +26,13 @@ class ListingController extends Controller
         ]);
 
         $query = Property::query()
-            ->with(['units', 'landlord', 'assignedUsers'])
+            ->with([
+                'units' => fn ($q) => $q->where('status', 'vacant')->with('images'),
+                'images',
+                'landlord',
+                'assignedUsers',
+            ])
+            ->whereHas('units', fn ($q) => $q->where('status', 'vacant'))
             ->latest();
 
         if (! empty($filters['country_id'])) {
@@ -40,6 +49,7 @@ class ListingController extends Controller
                 $q->where('size', $size)
                     ->orWhere(function ($inner) use ($size) {
                         $inner->whereNull('size')->whereHas('units', function ($units) use ($size) {
+                            $units->where('status', 'vacant');
                             match ($size) {
                                 'studio' => $units->where('bedrooms', '<=', 0),
                                 '5_plus' => $units->where('bedrooms', '>=', 5),
@@ -75,9 +85,18 @@ class ListingController extends Controller
         ]);
     }
 
-    public function show(Property $property): Response
+    public function show(Request $request, Property $property): Response
     {
-        $property->load(['units', 'landlord', 'assignedUsers']);
+        $property->load([
+            'units' => fn ($q) => $q->where('status', 'vacant')->with('images'),
+            'images',
+            'landlord',
+            'assignedUsers',
+        ]);
+
+        $contacts = $property->publicContacts();
+        $unlocked = $this->contactsUnlocked($request, $property);
+        $fee = BillingSetting::listingContactFee();
 
         return Inertia::render('Listings/Show', [
             'property' => [
@@ -89,12 +108,23 @@ class ListingController extends Controller
                     'id' => $unit->id,
                     'unit_number' => $unit->unit_number,
                     'rent_amount' => $unit->rent_amount,
+                    'deposit_amount' => $unit->deposit_amount,
                     'bedrooms' => $unit->bedrooms,
                     'bathrooms' => $unit->bathrooms,
                     'status' => $unit->status,
+                    'description' => $unit->description,
                     'image_url' => $unit->image_url,
+                    'image_urls' => $unit->image_urls,
                 ]),
-                'contacts' => $property->publicContacts(),
+                'contacts' => $unlocked ? $contacts : [],
+            ],
+            'contact_unlock' => [
+                'required' => $contacts !== [] && ! $unlocked && $fee > 0,
+                'has_contacts' => $contacts !== [],
+                'fee' => $fee,
+                'currency' => BillingSetting::currency(),
+                'paystack_ready' => PaystackService::configured(),
+                'fee_label' => BillingSetting::formatMoney($fee),
             ],
         ]);
     }
@@ -130,9 +160,45 @@ class ListingController extends Controller
             'state' => $property->state,
             'country' => $property->country,
             'image_url' => $property->image_url,
-            'total_units' => $property->units->count() ?: $property->total_units,
+            'image_urls' => $property->image_urls,
+            'total_units' => $property->units->count(),
             'min_rent' => $rents->min(),
             'max_bedrooms' => $property->units->max('bedrooms'),
         ];
+    }
+
+    protected function contactsUnlocked(Request $request, Property $property): bool
+    {
+        $user = $request->user();
+
+        if ($user?->isSuperAdmin() || ($user?->isLandlord() && (int) $property->landlord_id === (int) $user->id)) {
+            return true;
+        }
+
+        if (BillingSetting::listingContactFee() <= 0) {
+            return true;
+        }
+
+        $sessionIds = array_map('intval', $request->session()->get('unlocked_listings', []));
+        if (in_array((int) $property->id, $sessionIds, true)) {
+            return true;
+        }
+
+        $cookieIds = json_decode($request->cookie('unlocked_listings', '[]'), true);
+        if (is_array($cookieIds) && in_array((int) $property->id, array_map('intval', $cookieIds), true)) {
+            return true;
+        }
+
+        $email = $request->session()->get('unlock_email');
+        if (! $email) {
+            return false;
+        }
+
+        $unlock = ListingContactUnlock::query()
+            ->where('property_id', $property->id)
+            ->where('email', strtolower($email))
+            ->first();
+
+        return $unlock?->isValid() ?? false;
     }
 }

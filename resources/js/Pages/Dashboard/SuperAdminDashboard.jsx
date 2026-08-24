@@ -35,6 +35,21 @@ export default function SuperAdminDashboard({ stats, recentUsers }) {
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
+                        <h3 className="text-lg font-bold text-slate-800">Billing & subscriptions</h3>
+                        <p className="text-sm text-slate-500 mt-1">Set the free unit cap, Paystack plans, and the fee to unlock listing phone contacts.</p>
+                    </div>
+                    <Link
+                        href={route('billing.settings')}
+                        className="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl"
+                    >
+                        Manage billing
+                    </Link>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
                         <h3 className="text-lg font-bold text-slate-800">Public legal pages</h3>
                         <p className="text-sm text-slate-500 mt-1">Edit Terms of Service and Privacy Policy shown on the website and registration form.</p>
                     </div>

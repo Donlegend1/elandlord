@@ -1,8 +1,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 
-export default function PropertiesIndex({ properties }) {
+export default function PropertiesIndex({ properties, quota }) {
     const user = usePage().props.auth.user;
+    const atCap = user.role === 'landlord' && quota && quota.limit !== null && !quota.can_add;
 
     return (
         <AuthenticatedLayout
@@ -13,17 +14,32 @@ export default function PropertiesIndex({ properties }) {
                         <p className="text-sm text-slate-500">Register, manage, and assign property managers/assistants.</p>
                     </div>
                     {(['super_admin', 'landlord'].includes(user.role)) && (
-                        <Link
-                            href={route('properties.create')}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition"
-                        >
-                            + Register New Property
-                        </Link>
+                        atCap ? (
+                            <Link
+                                href={route('billing.index')}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition"
+                            >
+                                Subscribe to add units
+                            </Link>
+                        ) : (
+                            <Link
+                                href={route('properties.create')}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition"
+                            >
+                                + Register New Property
+                            </Link>
+                        )
                     )}
                 </div>
             }
         >
             <Head title="Properties" />
+
+            {atCap && (
+                <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm">
+                    You have used all {quota.limit} free units. <Link href={route('billing.index')} className="font-bold underline">Subscribe</Link> to add more.
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {properties.map((prop) => (

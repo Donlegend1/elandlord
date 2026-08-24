@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 function StatCard({ label, value, accent, icon }) {
     return (
@@ -16,6 +16,7 @@ function StatCard({ label, value, accent, icon }) {
 }
 
 export default function LandlordDashboard({ stats, properties, recentReceipts, upcomingRenewals, assistants }) {
+    const billing = usePage().props.billing;
     return (
         <AuthenticatedLayout
             header={
@@ -48,6 +49,20 @@ export default function LandlordDashboard({ stats, properties, recentReceipts, u
             }
         >
             <Head title="Landlord Dashboard" />
+
+            {billing && billing.limit !== null && (
+                <div className={'mb-6 rounded-2xl p-4 text-sm border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ' + (billing.can_add ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-amber-50 border-amber-200 text-amber-900')}>
+                    <span>
+                        Unit plan: {billing.used} / {billing.limit} used
+                        {billing.subscribed ? ' · Subscribed' : ''}
+                    </span>
+                    {!billing.subscribed && (
+                        <Link href={route('billing.index')} className="font-bold underline">
+                            {billing.can_add ? 'View plans' : 'Subscribe to add more units'}
+                        </Link>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
                 <StatCard

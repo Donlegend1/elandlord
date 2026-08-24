@@ -1,15 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\BillingController as AdminBillingController;
 use App\Http\Controllers\Admin\LegalPageController as AdminLegalPageController;
 use App\Http\Controllers\AssistantController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\ListingSettingsController;
+use App\Http\Controllers\ListingUnlockController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReceiptController;
@@ -33,6 +37,12 @@ Route::get('/listings/{property}', [ListingController::class, 'show'])->name('li
 Route::post('/listings/{property}/inquire', [ListingController::class, 'inquire'])
     ->middleware('throttle:5,1')
     ->name('listings.inquire');
+Route::post('/listings/{property}/unlock', [ListingUnlockController::class, 'store'])
+    ->middleware('throttle:8,1')
+    ->name('listings.unlock');
+Route::get('/listings/{property}/unlock/callback', [ListingUnlockController::class, 'callback'])
+    ->name('listings.unlock.callback');
+Route::post('/paystack/webhook', PaystackWebhookController::class)->name('paystack.webhook');
 Route::get('/locations/states', [LocationController::class, 'states'])->name('locations.states');
 Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 
@@ -89,10 +99,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
     Route::patch('/maintenance/{maintenanceRequest}/status', [MaintenanceController::class, 'updateStatus'])->name('maintenance.update-status');
 
+    Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::post('/billing/subscribe', [BillingController::class, 'subscribe'])->name('billing.subscribe');
+    Route::get('/billing/callback', [BillingController::class, 'callback'])->name('billing.callback');
+
     Route::middleware('role:super_admin')->group(function () {
         Route::get('/legal-pages', [AdminLegalPageController::class, 'index'])->name('legal-pages.index');
         Route::get('/legal-pages/{legalPage}/edit', [AdminLegalPageController::class, 'edit'])->name('legal-pages.edit');
         Route::put('/legal-pages/{legalPage}', [AdminLegalPageController::class, 'update'])->name('legal-pages.update');
+        Route::get('/billing/settings', [AdminBillingController::class, 'index'])->name('billing.settings');
+        Route::put('/billing/settings', [AdminBillingController::class, 'updateSettings'])->name('billing.settings.update');
     });
 });
 

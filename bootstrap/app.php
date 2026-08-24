@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
+            'paystack/webhook',
             'adminCall/serverController.php',
             'adminCall/serverAction.php',
             'adminCall/dashboard.php',
